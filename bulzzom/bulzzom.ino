@@ -120,12 +120,26 @@ static void bz_TimerTask(void* arg) {
         if(newTimer.servo.angle > 90) {
           for (int i=90; i<=newTimer.servo.angle; i++) {
             bz_servoArr[newTimer.servo.num - 'A'].write(i);
-            delay(50);
+            delay(10);
           }  
         } else {
           for (int i=90; i>=newTimer.servo.angle; i--) {
             bz_servoArr[newTimer.servo.num - 'A'].write(i);
-            delay(50);
+            delay(10);
+          }
+        }
+      } else if (newTimer.servo.num == 'D') {
+        if(newTimer.servo.angle > 90) {
+          for (int i=90; i<=newTimer.servo.angle; i++) {
+            for(int j=0; i<BZ_MAX_SERVO; i++)
+              bz_servoArr[j].write(i);
+            delay(10);
+          }  
+        } else {
+          for (int i=90; i>=newTimer.servo.angle; i--) {
+            for(int j=0; i<BZ_MAX_SERVO; i++)
+              bz_servoArr[j].write(i);
+            delay(10);
           }
         }
       }
@@ -144,12 +158,26 @@ static void bz_ServoTask(void* arg) {
         if(newServo.angle > 90) {
           for (int i=90; i<=newServo.angle; i++) {
             bz_servoArr[newServo.num - 'A'].write(i);
-            delay(50);
+            delay(10);
           }
         } else {
           for (int i=90; i>=newServo.angle; i--) {
             bz_servoArr[newServo.num - 'A'].write(i);
-            delay(50);
+            delay(10);
+          }
+        }
+      } else if (newServo.num == 'D') {
+        if(newServo.angle > 90) {
+          for (int i=90; i<=newServo.angle; i++) {
+            for(int j=0; i<BZ_MAX_SERVO; i++)
+              bz_servoArr[j].write(i);
+            delay(10);
+          }
+        } else {
+          for (int i=90; i>=newServo.angle; i--) {
+            for(int j=0; i<BZ_MAX_SERVO; i++)
+              bz_servoArr[j].write(i);
+            delay(10);
           }
         }
       }
