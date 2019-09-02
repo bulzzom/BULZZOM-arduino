@@ -91,10 +91,10 @@ static void bz_ReceiveTask(void* arg) {
           while(!Bluetooth.available());
           switch(Bluetooth.read()) {
           case 'N':
-            newTimer.servo.angle = 180;
+            newTimer.servo.angle = 160;
             break;
           case 'F':
-            newTimer.servo.angle = 0;
+            newTimer.servo.angle = 50;
             break;
           }
 
@@ -117,34 +117,14 @@ static void bz_TimerTask(void* arg) {
     if(xQueueReceive(bz_MsgQueue[BZ_TIMER], &newTimer, portMAX_DELAY)) {
       vTaskDelay(SEC(newTimer.second));
       if(newTimer.servo.num <= 'C' && newTimer.servo.num >= 'A') {
-        if(newTimer.servo.angle > 90) {
-          for (int i=90; i<=newTimer.servo.angle; i++) {
-            bz_servoArr[newTimer.servo.num - 'A'].write(i);
-            delay(10);
-          }  
-        } else {
-          for (int i=90; i>=newTimer.servo.angle; i--) {
-            bz_servoArr[newTimer.servo.num - 'A'].write(i);
-            delay(10);
-          }
-        }
+        bz_servoArr[newTimer.servo.num - 'A'].write(newTimer.servo.angle);
       } else if (newTimer.servo.num == 'D') {
-        if(newTimer.servo.angle > 90) {
-          for (int i=90; i<=newTimer.servo.angle; i++) {
-            for(int j=0; i<BZ_MAX_SERVO; i++)
-              bz_servoArr[j].write(i);
-            delay(10);
-          }  
-        } else {
-          for (int i=90; i>=newTimer.servo.angle; i--) {
-            for(int j=0; i<BZ_MAX_SERVO; i++)
-              bz_servoArr[j].write(i);
-            delay(10);
-          }
-        }
+        for(int j=0; j<BZ_MAX_SERVO; j++)
+              bz_servoArr[j].write(newTimer.servo.angle);
       }
       vTaskDelay(SEC(2));
       bz_servoArr[newTimer.servo.num - 'A'].write(90);
+      Bluetooth.write("OK");
     }
   }
 }
@@ -155,34 +135,20 @@ static void bz_ServoTask(void* arg) {
   for(;;) {
     if(xQueueReceive(bz_MsgQueue[BZ_SERVO], &newServo, portMAX_DELAY)) {
       if(newServo.num <= 'C' && newServo.num >= 'A') {
-        if(newServo.angle > 90) {
-          for (int i=90; i<=newServo.angle; i++) {
-            bz_servoArr[newServo.num - 'A'].write(i);
-            delay(10);
-          }
-        } else {
-          for (int i=90; i>=newServo.angle; i--) {
-            bz_servoArr[newServo.num - 'A'].write(i);
-            delay(10);
-          }
-        }
+        bz_servoArr[newServo.num - 'A'].write(newServo.angle);
+        
+        vTaskDelay(SEC(2));
+        bz_servoArr[newServo.num - 'A'].write(90);
       } else if (newServo.num == 'D') {
-        if(newServo.angle > 90) {
-          for (int i=90; i<=newServo.angle; i++) {
-            for(int j=0; i<BZ_MAX_SERVO; i++)
-              bz_servoArr[j].write(i);
-            delay(10);
-          }
-        } else {
-          for (int i=90; i>=newServo.angle; i--) {
-            for(int j=0; i<BZ_MAX_SERVO; i++)
-              bz_servoArr[j].write(i);
-            delay(10);
-          }
+        for(int j=0; j<BZ_MAX_SERVO; j++)
+          bz_servoArr[j].write(newServo.angle);
+
+        for(int j=0; j<BZ_MAX_SERVO; j++) {
+          vTaskDelay(SEC(2));
+          bz_servoArr[j].write(90);
         }
       }
-      vTaskDelay(SEC(2));
-      bz_servoArr[newServo.num - 'A'].write(90);
+      Bluetooth.write("OK");
     }
   }
 }
