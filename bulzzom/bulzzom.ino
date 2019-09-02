@@ -35,15 +35,16 @@ struct bz_timer {
 };
 
 /* Global variable */
-SoftwareSerial Bluetooth(2, 3); // (TX, RX)
+SoftwareSerial bluetooth(2, 3); // (BT_RXD, BT_TXD)
 Servo bz_servoArr[BZ_MAX_SERVO];
+const char *sendComplete = "OK\n";
 
 /* Function prototype */
 
 void setup() {
   short i;
   Serial.begin(9600);
-  Bluetooth.begin(9600);
+  bluetooth.begin(9600);
 
   bz_MsgQueue[BZ_TIMER] = xQueueCreate(BZ_QUEUE_SIZE, sizeof(struct bz_timer));
   bz_MsgQueue[BZ_ALARM] = xQueueCreate(BZ_QUEUE_SIZE, sizeof(struct bz_timer));
@@ -69,27 +70,27 @@ void loop() {
 
 static void bz_ReceiveTask(void* arg) {
   for(;;) {
-    if(Bluetooth.available()) {
-      switch(Bluetooth.read()) {
+    if(bluetooth.available()) {
+      switch(bluetooth.read()) {
         case 'S': // 'S'[char:num][int:angle]
           struct bz_servo newServo;
           
-          while(!Bluetooth.available());
-          newServo.num = Bluetooth.read();
+          while(!bluetooth.available());
+          newServo.num = bluetooth.read();
           
-          while(!Bluetooth.available());
-          newServo.angle = Bluetooth.parseInt();
+          while(!bluetooth.available());
+          newServo.angle = bluetooth.parseInt();
           
           xQueueSendToBack(bz_MsgQueue[BZ_SERVO], &newServo, 0);
           break;
         case 'T': // 'T'[char:num][char:on/off][int:second]
           struct bz_timer newTimer;
           
-          while(!Bluetooth.available());
-          newTimer.servo.num = Bluetooth.read();
+          while(!bluetooth.available());
+          newTimer.servo.num = bluetooth.read();
           
-          while(!Bluetooth.available());
-          switch(Bluetooth.read()) {
+          while(!bluetooth.available());
+          switch(bluetooth.read()) {
           case 'N':
             newTimer.servo.angle = 160;
             break;
@@ -98,13 +99,13 @@ static void bz_ReceiveTask(void* arg) {
             break;
           }
 
-          while(!Bluetooth.available());
-          newTimer.second = Bluetooth.parseInt();
+          while(!bluetooth.available());
+          newTimer.second = bluetooth.parseInt();
           
           xQueueSendToBack(bz_MsgQueue[BZ_TIMER], &newTimer, 0);
           break;
         default:
-          Serial.println(Bluetooth.parseInt());
+          break;
       }
     }
   }
@@ -118,13 +119,19 @@ static void bz_TimerTask(void* arg) {
       vTaskDelay(SEC(newTimer.second));
       if(newTimer.servo.num <= 'C' && newTimer.servo.num >= 'A') {
         bz_servoArr[newTimer.servo.num - 'A'].write(newTimer.servo.angle);
+        
+        bluetooth.write(sendComplete);
+        vTaskDelay(SEC(2));
+        bz_servoArr[newTimer.servo.num - 'A'].write(90);
       } else if (newTimer.servo.num == 'D') {
         for(int j=0; j<BZ_MAX_SERVO; j++)
               bz_servoArr[j].write(newTimer.servo.angle);
+
+        bluetooth.write(sendComplete);
+        vTaskDelay(SEC(2));
+        for(int j=0; j<BZ_MAX_SERVO; j++)
+              bz_servoArr[j].write(90);
       }
-      vTaskDelay(SEC(2));
-      bz_servoArr[newTimer.servo.num - 'A'].write(90);
-      Bluetooth.write("OK");
     }
   }
 }
@@ -136,19 +143,20 @@ static void bz_ServoTask(void* arg) {
     if(xQueueReceive(bz_MsgQueue[BZ_SERVO], &newServo, portMAX_DELAY)) {
       if(newServo.num <= 'C' && newServo.num >= 'A') {
         bz_servoArr[newServo.num - 'A'].write(newServo.angle);
-        
+
+        bluetooth.write(sendComplete);
         vTaskDelay(SEC(2));
         bz_servoArr[newServo.num - 'A'].write(90);
       } else if (newServo.num == 'D') {
         for(int j=0; j<BZ_MAX_SERVO; j++)
           bz_servoArr[j].write(newServo.angle);
 
+        bluetooth.write(sendComplete);
+        vTaskDelay(SEC(2));
         for(int j=0; j<BZ_MAX_SERVO; j++) {
-          vTaskDelay(SEC(2));
           bz_servoArr[j].write(90);
         }
       }
-      Bluetooth.write("OK");
     }
   }
 }
