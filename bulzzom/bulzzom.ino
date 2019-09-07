@@ -80,10 +80,11 @@ static void bz_ReceiveTask(void* arg) {
           
           while(!bluetooth.available());
           newServo.angle = bluetooth.parseInt();
-          
+
+          bluetooth.flush();
           xQueueSendToBack(bz_MsgQueue[BZ_SERVO], &newServo, 0);
           break;
-        case 'T': // 'T'[char:num][char:on/off][int:second]
+        case 'T': // 'T'[char:num][char:motor][char:on/off]
           struct bz_timer newTimer;
           
           while(!bluetooth.available());
@@ -95,16 +96,18 @@ static void bz_ReceiveTask(void* arg) {
             newTimer.servo.angle = 160;
             break;
           case 'F':
-            newTimer.servo.angle = 50;
+            newTimer.servo.angle = 20;
             break;
           }
 
           while(!bluetooth.available());
           newTimer.second = bluetooth.parseInt();
           
+          bluetooth.flush();
           xQueueSendToBack(bz_MsgQueue[BZ_TIMER], &newTimer, 0);
           break;
         default:
+          bluetooth.flush();
           break;
       }
     }
@@ -116,7 +119,18 @@ static void bz_TimerTask(void* arg) {
 
   for(;;) {
     if(xQueueReceive(bz_MsgQueue[BZ_TIMER], &newTimer, portMAX_DELAY)) {
-      vTaskDelay(SEC(newTimer.second));
+      if (newTimer.second > 65) {
+        float delayTimes = newTimer.second / 65;
+        int remains = newTimer.second % 65;
+
+        for (int i=0; i<delayTimes; i++) {
+          vTaskDelay(SEC(65));
+        }
+        vTaskDelay(SEC(remains));
+      } else {
+        vTaskDelay(SEC(newTimer.second));  
+      }
+      
       if(newTimer.servo.num <= 'C' && newTimer.servo.num >= 'A') {
         bz_servoArr[newTimer.servo.num - 'A'].write(newTimer.servo.angle);
         
